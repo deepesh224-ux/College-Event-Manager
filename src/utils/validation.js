@@ -1,41 +1,54 @@
-function validateEvent(data) {
-  if (!data.title || typeof data.title !== "string") {
-    return "Title is required and must be a string.";
-  }
+const { isValidDate } = require("./dateUtils");
 
-  if (!data.startAt || isNaN(new Date(data.startAt))) {
-    return "startAt is required and must be a valid date.";
-  }
-
-  if (!data.endAt || isNaN(new Date(data.endAt))) {
-    return "endAt is required and must be a valid date.";
-  }
-
-  const start = new Date(data.startAt);
-  const end = new Date(data.endAt);
-
-  if (end <= start) {
-    return "endAt must be later than startAt.";
-  }
-
-  if (data.capacity && (isNaN(data.capacity) || data.capacity <= 0)) {
-    return "Capacity must be a positive number.";
-  }
-
-  return null;
+function isEmpty(value) {
+  return !value || String(value).trim() === "";
 }
 
-function validateRegistration(data) {
-  if (!data.userId) return "userId is required.";
-  if (!data.eventId) return "eventId is required.";
+function isEmail(email) {
+  return /\S+@\S+\.\S+/.test(email);
+}
 
-  if (isNaN(Number(data.eventId))) return "eventId must be a number.";
+function isPositiveNumber(num) {
+  return typeof num === "number" && num > 0;
+}
 
-  return null;
+function validateEvent(eventData) {
+  const errors = [];
+
+  if (isEmpty(eventData.title)) errors.push("Title is required");
+  if (isEmpty(eventData.description)) errors.push("Description is required");
+
+  if (!isValidDate(eventData.date)) {
+    errors.push("Invalid date");
+  }
+
+  if (!isPositiveNumber(eventData.capacity)) {
+    errors.push("Capacity must be a positive number");
+  }
+
+  return {
+    success: errors.length === 0,
+    errors
+  };
+}
+
+function validateRegistration(regData) {
+  const errors = [];
+
+  if (isEmpty(regData.name)) errors.push("Name is required");
+  if (!isEmail(regData.email)) errors.push("Invalid email");
+  if (isEmpty(regData.eventId)) errors.push("Event ID is required");
+
+  return {
+    success: errors.length === 0,
+    errors
+  };
 }
 
 module.exports = {
+  isEmpty,
+  isEmail,
+  isPositiveNumber,
   validateEvent,
   validateRegistration
 };
-
