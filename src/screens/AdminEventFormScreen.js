@@ -1,8 +1,12 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useEvents } from '../context/EventsContext';
 
 const AdminEventFormScreen = ({ navigation, route }) => {
-    const eventToEdit = route.params?.event;
+    const { eventId } = route.params || {};
+    const { getEventById, createEvent, editEvent } = useEvents();
+
+    const eventToEdit = eventId ? getEventById(eventId) : null;
     const isEditing = !!eventToEdit;
 
     const [title, setTitle] = useState(eventToEdit?.title || '');
@@ -13,6 +17,8 @@ const AdminEventFormScreen = ({ navigation, route }) => {
     const [description, setDescription] = useState(eventToEdit?.description || '');
     const [capacity, setCapacity] = useState(eventToEdit?.capacity?.toString() || '');
     const [image, setImage] = useState(eventToEdit?.image || '');
+    const [contactPerson, setContactPerson] = useState(eventToEdit?.contactPerson || '');
+    const [contactNumber, setContactNumber] = useState(eventToEdit?.contactNumber || '');
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -20,20 +26,49 @@ const AdminEventFormScreen = ({ navigation, route }) => {
         });
     }, [navigation, isEditing]);
 
-    const handleSave = () => {
-        if (!title || !date || !time || !venue || !description || !capacity) {
+    const handleSave = async () => {
+        if (!title || !date || !venue || !description || !capacity) {
             Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
 
-        // Mock Save Logic
-        Alert.alert(
-            'Success',
-            `Event ${isEditing ? 'updated' : 'created'} successfully!`,
-            [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]
-        );
+        const capacityNum = parseInt(capacity);
+        if (isNaN(capacityNum) || capacityNum <= 0) {
+            Alert.alert('Error', 'Capacity must be a positive number');
+            return;
+        }
+
+        const eventData = {
+            title,
+            date,
+            time,
+            venue,
+            type,
+            description,
+            capacity: capacityNum,
+            image,
+            contactPerson,
+            contactNumber,
+        };
+
+        let result;
+        if (isEditing) {
+            result = await editEvent(eventId, eventData);
+        } else {
+            result = await createEvent(eventData);
+        }
+
+        if (result.success) {
+            Alert.alert(
+                'Success',
+                `Event ${isEditing ? 'updated' : 'created'} successfully!`,
+                [
+                    { text: 'OK', onPress: () => navigation.goBack() }
+                ]
+            );
+        } else {
+            Alert.alert('Error', 'Failed to save event');
+        }
     };
 
     return (
@@ -63,7 +98,7 @@ const AdminEventFormScreen = ({ navigation, route }) => {
                         />
                     </View>
                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                        <Text style={styles.label}>Time *</Text>
+                        <Text style={styles.label}>Time</Text>
                         <TextInput
                             style={styles.input}
                             value={time}
@@ -86,7 +121,7 @@ const AdminEventFormScreen = ({ navigation, route }) => {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Event Type</Text>
                     <View style={styles.typeContainer}>
-                        {['Technical', 'Cultural', 'Sports'].map((t) => (
+                        {['Technical', 'Cultural', 'Sports', 'Workshop', 'Seminar'].map((t) => (
                             <TouchableOpacity
                                 key={t}
                                 style={[styles.typeButton, type === t && styles.activeTypeButton]}
@@ -110,12 +145,34 @@ const AdminEventFormScreen = ({ navigation, route }) => {
                 </View>
 
                 <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Contact Person</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={contactPerson}
+                        onChangeText={setContactPerson}
+                        placeholder="e.g., John Doe"
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Contact Number</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={contactNumber}
+                        onChangeText={setContactNumber}
+                        placeholder="e.g., +91 1234567890"
+                        keyboardType="phone-pad"
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
                     <Text style={styles.label}>Image URL</Text>
                     <TextInput
                         style={styles.input}
                         value={image}
                         onChangeText={setImage}
                         placeholder="https://..."
+                        autoCapitalize="none"
                     />
                 </View>
 
@@ -174,6 +231,7 @@ const styles = StyleSheet.create({
     },
     typeContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
     },
     typeButton: {
         paddingHorizontal: 16,
@@ -182,6 +240,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         marginRight: 10,
+        marginBottom: 10,
         backgroundColor: '#f9f9f9',
     },
     activeTypeButton: {

@@ -1,71 +1,70 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Calendar, MapPin, Clock } from 'lucide-react-native';
-
-// Mock data for registered events (subset of main events)
-const MOCK_MY_EVENTS = [
-    {
-        id: '1',
-        title: 'Tech Symposium 2024',
-        date: '2024-03-15',
-        time: '10:00 AM',
-        venue: 'Main Auditorium',
-        type: 'Technical',
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1000',
-        status: 'Registered',
-    },
-    {
-        id: '3',
-        title: 'Inter-College Cricket Tournament',
-        date: '2024-03-25',
-        time: '8:00 AM',
-        venue: 'College Ground',
-        type: 'Sports',
-        image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1000',
-        status: 'Interested',
-    },
-];
+import { useEvents } from '../context/EventsContext';
+import { useUser } from '../context/UserContext';
 
 const MyEventsScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Registered');
+    const { events, getMyRegisteredEvents, getMyInterestedEvents, loading } = useEvents();
+    const { currentUser } = useUser();
 
-    const filteredEvents = MOCK_MY_EVENTS.filter(event =>
-        activeTab === 'Registered' ? event.status === 'Registered' : event.status === 'Interested'
-    );
+    const registeredEvents = currentUser ? getMyRegisteredEvents(currentUser.id) : [];
+    const interestedEvents = currentUser ? getMyInterestedEvents(currentUser.id) : [];
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={() => {
-                // In a real app, we would navigate to details. 
-                // For now, we just show the card.
-                // navigation.navigate('EventDetails', { event: item });
-            }}
-        >
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
-            <View style={styles.cardContent}>
-                <View style={[styles.statusBadge, { backgroundColor: item.status === 'Registered' ? '#4CAF50' : '#FF9800' }]}>
-                    <Text style={styles.statusText}>{item.status}</Text>
+    // Get full event details
+    const getEventDetails = (registration) => {
+        return events.find(e => e.id === registration.eventId);
+    };
+
+    const filteredData = activeTab === 'Registered' ? registeredEvents : interestedEvents;
+
+    const renderItem = ({ item }) => {
+        const event = getEventDetails(item);
+        if (!event) return null;
+
+        return (
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => navigation.navigate('EventDetails', { eventId: event.id })}
+            >
+                {event.image && <Image source={{ uri: event.image }} style={styles.cardImage} />}
+                <View style={styles.cardContent}>
+                    <View style={[styles.statusBadge, { backgroundColor: activeTab === 'Registered' ? '#4CAF50' : '#FF9800' }]}>
+                        <Text style={styles.statusText}>{activeTab}</Text>
+                    </View>
+                    <Text style={styles.title}>{event.title}</Text>
+
+                    <View style={styles.infoRow}>
+                        <Calendar size={16} color="#666" />
+                        <Text style={styles.infoText}>{event.date}</Text>
+                    </View>
+
+                    {event.time && (
+                        <View style={styles.infoRow}>
+                            <Clock size={16} color="#666" />
+                            <Text style={styles.infoText}>{event.time}</Text>
+                        </View>
+                    )}
+
+                    {event.venue && (
+                        <View style={styles.infoRow}>
+                            <MapPin size={16} color="#666" />
+                            <Text style={styles.infoText}>{event.venue}</Text>
+                        </View>
+                    )}
                 </View>
-                <Text style={styles.title}>{item.title}</Text>
+            </TouchableOpacity>
+        );
+    };
 
-                <View style={styles.infoRow}>
-                    <Calendar size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.date}</Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                    <Clock size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.time}</Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                    <MapPin size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.venue}</Text>
-                </View>
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
             </View>
-        </TouchableOpacity>
-    );
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -74,24 +73,36 @@ const MyEventsScreen = ({ navigation }) => {
                     style={[styles.tab, activeTab === 'Registered' && styles.activeTab]}
                     onPress={() => setActiveTab('Registered')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'Registered' && styles.activeTabText]}>Registered</Text>
+                    <Text style={[styles.tabText, activeTab === 'Registered' && styles.activeTabText]}>
+                        Registered ({registeredEvents.length})
+                    </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'Interested' && styles.activeTab]}
                     onPress={() => setActiveTab('Interested')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'Interested' && styles.activeTabText]}>Interested</Text>
+                    <Text style={[styles.tabText, activeTab === 'Interested' && styles.activeTabText]}>
+                        Interested ({interestedEvents.length})
+                    </Text>
                 </TouchableOpacity>
             </View>
 
             <FlatList
-                data={filteredEvents}
+                data={filteredData}
                 renderItem={renderItem}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.eventId}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No events found.</Text>
+                        <Text style={styles.emptyText}>
+                            No {activeTab.toLowerCase()} events found.
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.browseButton}
+                            onPress={() => navigation.navigate('EventsTab')}
+                        >
+                            <Text style={styles.browseButtonText}>Browse Events</Text>
+                        </TouchableOpacity>
                     </View>
                 }
             />
@@ -103,6 +114,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     tabContainer: {
         flexDirection: 'row',
@@ -134,6 +150,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
+        flexGrow: 1,
     },
     card: {
         backgroundColor: 'white',
@@ -183,12 +200,27 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     emptyContainer: {
-        padding: 40,
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
+        padding: 40,
     },
     emptyText: {
         fontSize: 16,
         color: '#999',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    browseButton: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        backgroundColor: '#007AFF',
+        borderRadius: 8,
+    },
+    browseButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 

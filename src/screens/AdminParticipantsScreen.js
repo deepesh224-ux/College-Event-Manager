@@ -1,17 +1,14 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { User, Hash, BookOpen } from 'lucide-react-native';
-
-const MOCK_PARTICIPANTS = [
-    { id: '1', name: 'Alice Johnson', rollNo: 'CS21001', branch: 'CSE', year: '3rd' },
-    { id: '2', name: 'Bob Smith', rollNo: 'ME21045', branch: 'ME', year: '3rd' },
-    { id: '3', name: 'Charlie Brown', rollNo: 'EC22012', branch: 'ECE', year: '2nd' },
-    { id: '4', name: 'David Lee', rollNo: 'CS21056', branch: 'CSE', year: '3rd' },
-    { id: '5', name: 'Eva Green', rollNo: 'EE20033', branch: 'EEE', year: '4th' },
-];
+import { useEvents } from '../context/EventsContext';
 
 const AdminParticipantsScreen = ({ route, navigation }) => {
-    const { eventTitle } = route.params;
+    const { eventId } = route.params;
+    const { getEventById, getParticipants, loading } = useEvents();
+
+    const event = getEventById(eventId);
+    const participants = getParticipants(eventId);
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -19,39 +16,96 @@ const AdminParticipantsScreen = ({ route, navigation }) => {
         });
     }, [navigation]);
 
-    const renderItem = ({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
-            </View>
-            <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                        <Hash size={14} color="#666" />
-                        <Text style={styles.detailText}>{item.rollNo}</Text>
+    const renderItem = ({ item }) => {
+        const student = item.student;
+
+        return (
+            <View style={styles.card}>
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{student.name?.charAt(0) || 'U'}</Text>
+                </View>
+                <View style={styles.info}>
+                    <Text style={styles.name}>{student.name || 'Unknown'}</Text>
+                    <View style={styles.detailsRow}>
+                        {student.rollNumber && (
+                            <View style={styles.detailItem}>
+                                <Hash size={14} color="#666" />
+                                <Text style={styles.detailText}>{student.rollNumber}</Text>
+                            </View>
+                        )}
+                        {student.branch && (
+                            <View style={styles.detailItem}>
+                                <BookOpen size={14} color="#666" />
+                                <Text style={styles.detailText}>
+                                    {student.branch}{student.year ? ` - ${student.year}${getYearSuffix(student.year)} Year` : ''}
+                                </Text>
+                            </View>
+                        )}
+                        {student.email && (
+                            <View style={styles.detailItem}>
+                                <User size={14} color="#666" />
+                                <Text style={styles.detailText}>{student.email}</Text>
+                            </View>
+                        )}
                     </View>
-                    <View style={styles.detailItem}>
-                        <BookOpen size={14} color="#666" />
-                        <Text style={styles.detailText}>{item.branch} - {item.year} Year</Text>
-                    </View>
+                    {item.registeredAt && (
+                        <Text style={styles.registeredTime}>
+                            Registered: {new Date(item.registeredAt).toLocaleDateString()}
+                        </Text>
+                    )}
                 </View>
             </View>
-        </View>
-    );
+        );
+    };
+
+    const getYearSuffix = (year) => {
+        if (year === 1) return 'st';
+        if (year === 2) return 'nd';
+        if (year === 3) return 'rd';
+        return 'th';
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
+
+    if (!event) {
+        return (
+            <View style={styles.centerContainer}>
+                <Text style={styles.errorText}>Event not found</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>{eventTitle}</Text>
-                <Text style={styles.headerSubtitle}>Total Registrations: {MOCK_PARTICIPANTS.length}</Text>
+                <Text style={styles.headerTitle}>{event.title}</Text>
+                <Text style={styles.headerSubtitle}>Total Registrations: {participants.length}</Text>
+                {event.capacity && (
+                    <Text style={styles.headerSubtitle}>
+                        Capacity: {participants.length}/{event.capacity}
+                    </Text>
+                )}
             </View>
 
             <FlatList
-                data={MOCK_PARTICIPANTS}
+                data={participants}
                 renderItem={renderItem}
-                keyExtractor={item => item.id}
+                keyExtractor={(item, index) => item.student.id || index.toString()}
                 contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No participants yet</Text>
+                        <Text style={styles.emptySubText}>
+                            Participants will appear here once they register
+                        </Text>
+                    </View>
+                }
             />
         </View>
     );
@@ -61,6 +115,15 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#666',
     },
     header: {
         padding: 16,
@@ -80,6 +143,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
+        flexGrow: 1,
     },
     card: {
         flexDirection: 'row',
@@ -118,18 +182,40 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     detailsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: 'column',
     },
     detailItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 16,
+        marginTop: 2,
     },
     detailText: {
         marginLeft: 4,
         fontSize: 12,
         color: '#666',
+    },
+    registeredTime: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 4,
+        fontStyle: 'italic',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: 18,
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
     },
 });
 

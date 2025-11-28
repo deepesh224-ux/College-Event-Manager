@@ -31,10 +31,21 @@ export function isBefore(date1, date2) {
   return new Date(date1).getTime() < new Date(date2).getTime();
 }
 
+// Check if a date is today
+export function isToday(dateString) {
+  const date = new Date(dateString);
+  const today = new Date();
+
+  return date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+}
+
 export default {
   toDate,
   isValidDate,
   formatDate,
   isAfter,
-  isBefore
+  isBefore,
+  isToday
 };

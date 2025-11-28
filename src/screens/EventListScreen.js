@@ -1,57 +1,15 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Calendar, MapPin, Clock } from 'lucide-react-native';
-
-const MOCK_EVENTS = [
-    {
-        id: '1',
-        title: 'Tech Symposium 2024',
-        date: '2024-03-15',
-        time: '10:00 AM',
-        venue: 'Main Auditorium',
-        type: 'Technical',
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1000',
-        description: 'Annual technical symposium featuring keynote speakers from top tech companies, workshops, and project exhibitions.',
-        contactPerson: 'John Doe',
-        contactNumber: '123-456-7890',
-        capacity: 200,
-        registeredCount: 150,
-    },
-    {
-        id: '2',
-        title: 'Cultural Fest - Aagaz',
-        date: '2024-03-20',
-        time: '5:00 PM',
-        venue: 'Open Air Theatre',
-        type: 'Cultural',
-        image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1000',
-        description: 'A night of music, dance, and drama. Come witness the best talent of our college.',
-        contactPerson: 'Jane Smith',
-        contactNumber: '987-654-3210',
-        capacity: 500,
-        registeredCount: 500, // Full
-    },
-    {
-        id: '3',
-        title: 'Inter-College Cricket Tournament',
-        date: '2024-03-25',
-        time: '8:00 AM',
-        venue: 'College Ground',
-        type: 'Sports',
-        image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1000',
-        description: 'Cheer for your team in the inter-college cricket tournament finals.',
-        contactPerson: 'Mike Johnson',
-        contactNumber: '555-123-4567',
-        capacity: 1000,
-        registeredCount: 300,
-    },
-];
+import { useEvents } from '../context/EventsContext';
 
 const EventListScreen = ({ navigation }) => {
+    const { events, loading } = useEvents();
+
     useLayoutEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <TouchableOpacity onPress={() => navigation.navigate('MyEvents')} style={styles.headerButton}>
+                <TouchableOpacity onPress={() => navigation.navigate('MyEventsTab')} style={styles.headerButton}>
                     <Text style={styles.headerButtonText}>My Events</Text>
                 </TouchableOpacity>
             ),
@@ -61,12 +19,12 @@ const EventListScreen = ({ navigation }) => {
     const renderItem = ({ item }) => (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => navigation.navigate('EventDetails', { event: item })}
+            onPress={() => navigation.navigate('EventDetails', { eventId: item.id })}
         >
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
+            {item.image && <Image source={{ uri: item.image }} style={styles.cardImage} />}
             <View style={styles.cardContent}>
                 <View style={styles.typeBadge}>
-                    <Text style={styles.typeText}>{item.type}</Text>
+                    <Text style={styles.typeText}>{item.type || 'Event'}</Text>
                 </View>
                 <Text style={styles.title}>{item.title}</Text>
 
@@ -75,17 +33,21 @@ const EventListScreen = ({ navigation }) => {
                     <Text style={styles.infoText}>{item.date}</Text>
                 </View>
 
-                <View style={styles.infoRow}>
-                    <Clock size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.time}</Text>
-                </View>
+                {item.time && (
+                    <View style={styles.infoRow}>
+                        <Clock size={16} color="#666" />
+                        <Text style={styles.infoText}>{item.time}</Text>
+                    </View>
+                )}
 
-                <View style={styles.infoRow}>
-                    <MapPin size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.venue}</Text>
-                </View>
+                {item.venue && (
+                    <View style={styles.infoRow}>
+                        <MapPin size={16} color="#666" />
+                        <Text style={styles.infoText}>{item.venue}</Text>
+                    </View>
+                )}
 
-                {item.registeredCount >= item.capacity && (
+                {item.remainingSeats !== undefined && item.remainingSeats <= 0 && (
                     <View style={styles.fullBadge}>
                         <Text style={styles.fullText}>Full</Text>
                     </View>
@@ -94,13 +56,27 @@ const EventListScreen = ({ navigation }) => {
         </TouchableOpacity>
     );
 
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Loading events...</Text>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <FlatList
-                data={MOCK_EVENTS}
+                data={events}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.centerContainer}>
+                        <Text style={styles.emptyText}>No events available</Text>
+                    </View>
+                }
             />
         </View>
     );
@@ -110,6 +86,21 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#666',
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#999',
     },
     listContent: {
         padding: 16,

@@ -179,3 +179,11 @@ export function EventsProvider({ children }) {
     </EventsContext.Provider>
   );
 }
+
+export const useEvents = () => {
+  const context = React.useContext(EventsContext);
+  if (!context) {
+    throw new Error('useEvents must be used within an EventsProvider');
+  }
+  return context;
+};

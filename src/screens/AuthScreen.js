@@ -1,24 +1,49 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { User, Lock, Mail, BookOpen } from 'lucide-react-native';
+import { useUser } from '../context/UserContext';
 
-const AuthScreen = ({ navigation }) => {
+const AuthScreen = () => {
+    const { signIn } = useUser();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [rollNo, setRollNo] = useState('');
 
-    const handleAuth = () => {
-        // Mock Authentication Logic
-        if (email === 'admin@college.edu' && password === 'admin') {
-            navigation.replace('AdminEventList');
-        } else if (email && password) {
-            // Simulate student login
-            navigation.replace('EventList');
-        } else {
-            Alert.alert('Error', 'Please fill in all fields');
+    const handleAuth = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please fill in all required fields');
+            return;
         }
+
+        // Check if admin login
+        const isAdmin = email === 'admin@college.edu' && password === 'admin';
+
+        if (!isLogin && !name) {
+            Alert.alert('Error', 'Please enter your name');
+            return;
+        }
+
+        // Create user object
+        const userObj = {
+            name: isAdmin ? 'Admin User' : name || email.split('@')[0],
+            email,
+            isAdmin,
+        };
+
+        // Add student-specific fields
+        if (!isAdmin && !isLogin) {
+            if (rollNo) userObj.rollNumber = rollNo;
+        }
+
+        // Sign in using UserContext
+        const result = await signIn(userObj);
+
+        if (!result.success) {
+            Alert.alert('Sign In Failed', result.message || 'Please try again');
+        }
+        // Navigation will happen automatically via AppNavigator based on user role
     };
 
     return (
@@ -26,82 +51,85 @@ const AuthScreen = ({ navigation }) => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <View style={styles.logoContainer}>
-                <View style={styles.logoCircle}>
-                    <BookOpen size={40} color="#007AFF" />
-                </View>
-                <Text style={styles.appName}>CampusHub</Text>
-                <Text style={styles.tagline}>College Event Manager</Text>
-            </View>
-
-            <View style={styles.formContainer}>
-                <Text style={styles.headerText}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
-
-                {!isLogin && (
-                    <>
-                        <View style={styles.inputContainer}>
-                            <User size={20} color="#666" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Full Name"
-                                value={name}
-                                onChangeText={setName}
-                            />
-                        </View>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.hashIcon}>#</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Roll Number"
-                                value={rollNo}
-                                onChangeText={setRollNo}
-                            />
-                        </View>
-                    </>
-                )}
-
-                <View style={styles.inputContainer}>
-                    <Mail size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email Address"
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                    />
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.logoContainer}>
+                    <View style={styles.logoCircle}>
+                        <BookOpen size={40} color="#007AFF" />
+                    </View>
+                    <Text style={styles.appName}>CampusHub</Text>
+                    <Text style={styles.tagline}>College Event Manager</Text>
                 </View>
 
-                <View style={styles.inputContainer}>
-                    <Lock size={20} color="#666" style={styles.inputIcon} />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                    />
-                </View>
+                <View style={styles.formContainer}>
+                    <Text style={styles.headerText}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
 
-                <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
-                    <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Sign Up'}</Text>
-                </TouchableOpacity>
+                    {!isLogin && (
+                        <>
+                            <View style={styles.inputContainer}>
+                                <User size={20} color="#666" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Full Name"
+                                    value={name}
+                                    onChangeText={setName}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.hashIcon}>#</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Roll Number (Optional)"
+                                    value={rollNo}
+                                    onChangeText={setRollNo}
+                                />
+                            </View>
+                        </>
+                    )}
 
-                <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={styles.switchButton}>
-                    <Text style={styles.switchText}>
-                        {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
-                    </Text>
-                </TouchableOpacity>
+                    <View style={styles.inputContainer}>
+                        <Mail size={20} color="#666" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email Address"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+                    </View>
 
-                {isLogin && (
-                    <TouchableOpacity onPress={() => {
-                        setEmail('admin@college.edu');
-                        setPassword('admin');
-                    }} style={styles.adminHint}>
-                        <Text style={styles.adminHintText}>Tap for Admin Demo</Text>
+                    <View style={styles.inputContainer}>
+                        <Lock size={20} color="#666" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                        />
+                    </View>
+
+                    <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
+                        <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Sign Up'}</Text>
                     </TouchableOpacity>
-                )}
-            </View>
+
+                    <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={styles.switchButton}>
+                        <Text style={styles.switchText}>
+                            {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {isLogin && (
+                        <TouchableOpacity onPress={() => {
+                            setEmail('admin@college.edu');
+                            setPassword('admin');
+                        }} style={styles.adminHint}>
+                            <Text style={styles.adminHintText}>Tap for Admin Demo</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 };
@@ -110,6 +138,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    scrollContent: {
+        flexGrow: 1,
         justifyContent: 'center',
         padding: 20,
     },

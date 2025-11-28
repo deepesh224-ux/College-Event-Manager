@@ -1,88 +1,109 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { Clock, MapPin } from 'lucide-react-native';
-
-// Mock data - assuming "today" is 2024-03-15
-const TODAY_EVENTS = [
-    {
-        id: '1',
-        title: 'Tech Symposium 2024',
-        time: '10:00 AM',
-        endTime: '12:00 PM',
-        venue: 'Main Auditorium',
-        type: 'Technical',
-        status: 'Registered',
-        color: '#2196F3'
-    },
-    {
-        id: '4',
-        title: 'Lunch Break',
-        time: '12:00 PM',
-        endTime: '1:00 PM',
-        venue: 'Cafeteria',
-        type: 'Break',
-        status: 'All',
-        color: '#4CAF50'
-    },
-    {
-        id: '5',
-        title: 'Workshop: AI in 2024',
-        time: '1:30 PM',
-        endTime: '3:30 PM',
-        venue: 'Lab 3',
-        type: 'Technical',
-        status: 'Interested',
-        color: '#FF9800'
-    }
-];
+import { useEvents } from '../context/EventsContext';
+import { useUser } from '../context/UserContext';
+import { isToday, formatDate } from '../utils/dateUtils';
 
 const MyDayScreen = () => {
-    const renderItem = ({ item, index }) => (
-        <View style={styles.timelineItem}>
-            <View style={styles.timeContainer}>
-                <Text style={styles.timeText}>{item.time}</Text>
-                <View style={[styles.line, { display: index === TODAY_EVENTS.length - 1 ? 'none' : 'flex' }]} />
-            </View>
+    const { events, getMyRegisteredEvents, getMyInterestedEvents, loading } = useEvents();
+    const { currentUser } = useUser();
 
-            <View style={[styles.card, { borderLeftColor: item.color }]}>
-                <View style={styles.cardHeader}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    <View style={[styles.badge, { backgroundColor: item.color }]}>
-                        <Text style={styles.badgeText}>{item.type}</Text>
+    // Get user's events
+    const myRegistrations = currentUser ? getMyRegisteredEvents(currentUser.id) : [];
+    const myInterests = currentUser ? getMyInterestedEvents(currentUser.id) : [];
+
+    // Combine and get full event details for today
+    const todayEvents = [...myRegistrations, ...myInterests]
+        .map(item => {
+            const event = events.find(e => e.id === item.eventId);
+            if (!event || !isToday(event.date)) return null;
+
+            return {
+                ...event,
+                status: myRegistrations.some(r => r.eventId === event.id) ? 'Registered' : 'Interested',
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            // Sort by time if available
+            if (a.time && b.time) {
+                return a.time.localeCompare(b.time);
+            }
+            return 0;
+        });
+
+    const renderItem = ({ item, index }) => {
+        const color = item.status === 'Registered' ? '#4CAF50' : '#FF9800';
+
+        return (
+            <View style={styles.timelineItem}>
+                <View style={styles.timeContainer}>
+                    <Text style={styles.timeText}>{item.time || 'TBA'}</Text>
+                    <View style={[styles.line, { display: index === todayEvents.length - 1 ? 'none' : 'flex' }]} />
+                </View>
+
+                <View style={[styles.card, { borderLeftColor: color }]}>
+                    <View style={styles.cardHeader}>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <View style={[styles.badge, { backgroundColor: color }]}>
+                            <Text style={styles.badgeText}>{item.type || 'Event'}</Text>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.infoRow}>
-                    <Clock size={14} color="#666" />
-                    <Text style={styles.infoText}>{item.time} - {item.endTime}</Text>
-                </View>
+                    {item.time && item.endTime && (
+                        <View style={styles.infoRow}>
+                            <Clock size={14} color="#666" />
+                            <Text style={styles.infoText}>{item.time} - {item.endTime}</Text>
+                        </View>
+                    )}
 
-                <View style={styles.infoRow}>
-                    <MapPin size={14} color="#666" />
-                    <Text style={styles.infoText}>{item.venue}</Text>
-                </View>
+                    {item.venue && (
+                        <View style={styles.infoRow}>
+                            <MapPin size={14} color="#666" />
+                            <Text style={styles.infoText}>{item.venue}</Text>
+                        </View>
+                    )}
 
-                {item.status !== 'All' && (
-                    <Text style={[styles.statusText, { color: item.status === 'Registered' ? '#4CAF50' : '#FF9800' }]}>
+                    <Text style={[styles.statusText, { color }]}>
                         • {item.status}
                     </Text>
-                )}
+                </View>
             </View>
-        </View>
-    );
+        );
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
+
+    const today = new Date();
+    const dateText = formatDate(today.toISOString()) || today.toLocaleDateString();
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.dateText}>March 15, 2024</Text>
+                <Text style={styles.dateText}>{dateText}</Text>
                 <Text style={styles.subText}>Your Schedule</Text>
             </View>
 
             <FlatList
-                data={TODAY_EVENTS}
+                data={todayEvents}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No events scheduled for today</Text>
+                        <Text style={styles.emptySubText}>
+                            Events you register for or mark as interested will appear here
+                        </Text>
+                    </View>
+                }
             />
         </View>
     );
@@ -92,6 +113,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         padding: 20,
@@ -111,6 +137,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 20,
+        flexGrow: 1,
     },
     timelineItem: {
         flexDirection: 'row',
@@ -125,6 +152,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 8,
+        fontSize: 12,
     },
     line: {
         width: 2,
@@ -180,6 +208,24 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         marginTop: 4,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: 18,
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
     },
 });
 

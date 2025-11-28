@@ -1,45 +1,28 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { Calendar, MapPin, Clock, Plus, Edit, Trash2, Users } from 'lucide-react-native';
-
-const MOCK_EVENTS = [
-    {
-        id: '1',
-        title: 'Tech Symposium 2024',
-        date: '2024-03-15',
-        time: '10:00 AM',
-        venue: 'Main Auditorium',
-        type: 'Technical',
-        image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1000',
-        registeredCount: 150,
-        capacity: 200,
-    },
-    {
-        id: '2',
-        title: 'Cultural Fest - Aagaz',
-        date: '2024-03-20',
-        time: '5:00 PM',
-        venue: 'Open Air Theatre',
-        type: 'Cultural',
-        image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1000',
-        registeredCount: 500,
-        capacity: 500,
-    },
-];
+import { useEvents } from '../context/EventsContext';
 
 const AdminEventListScreen = ({ navigation }) => {
-    const [events, setEvents] = useState(MOCK_EVENTS);
+    const { events, cancelEvent, loading } = useEvents();
 
-    const handleDelete = (id) => {
+    const handleDelete = (id, title) => {
         Alert.alert(
-            'Delete Event',
-            'Are you sure you want to delete this event?',
+            'Cancel Event',
+            `Are you sure you want to cancel "${title}"?`,
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: 'No', style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: 'Yes, Cancel Event',
                     style: 'destructive',
-                    onPress: () => setEvents(events.filter(e => e.id !== id))
+                    onPress: async () => {
+                        const result = await cancelEvent(id);
+                        if (result.success) {
+                            Alert.alert('Success', 'Event cancelled successfully');
+                        } else {
+                            Alert.alert('Error', 'Failed to cancel event');
+                        }
+                    }
                 }
             ]
         );
@@ -47,53 +30,71 @@ const AdminEventListScreen = ({ navigation }) => {
 
     const renderItem = ({ item }) => (
         <View style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
+            {item.image && <Image source={{ uri: item.image }} style={styles.cardImage} />}
             <View style={styles.cardContent}>
                 <View style={styles.headerRow}>
                     <Text style={styles.title}>{item.title}</Text>
                     <View style={styles.actionButtons}>
                         <TouchableOpacity
                             style={styles.iconButton}
-                            onPress={() => navigation.navigate('AdminEventForm', { event: item })}
+                            onPress={() => navigation.navigate('AdminEventForm', { eventId: item.id })}
                         >
                             <Edit size={20} color="#007AFF" />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.iconButton}
-                            onPress={() => handleDelete(item.id)}
+                            onPress={() => handleDelete(item.id, item.title)}
                         >
                             <Trash2 size={20} color="#FF3B30" />
                         </TouchableOpacity>
                     </View>
                 </View>
 
+                {item.status === 'cancelled' && (
+                    <View style={styles.cancelledBadge}>
+                        <Text style={styles.cancelledText}>CANCELLED</Text>
+                    </View>
+                )}
+
                 <View style={styles.infoRow}>
                     <Calendar size={16} color="#666" />
                     <Text style={styles.infoText}>{item.date}</Text>
                 </View>
 
-                <View style={styles.infoRow}>
-                    <Clock size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.time}</Text>
-                </View>
+                {item.time && (
+                    <View style={styles.infoRow}>
+                        <Clock size={16} color="#666" />
+                        <Text style={styles.infoText}>{item.time}</Text>
+                    </View>
+                )}
 
-                <View style={styles.infoRow}>
-                    <MapPin size={16} color="#666" />
-                    <Text style={styles.infoText}>{item.venue}</Text>
-                </View>
+                {item.venue && (
+                    <View style={styles.infoRow}>
+                        <MapPin size={16} color="#666" />
+                        <Text style={styles.infoText}>{item.venue}</Text>
+                    </View>
+                )}
 
                 <TouchableOpacity
                     style={styles.participantsButton}
-                    onPress={() => navigation.navigate('AdminParticipants', { eventId: item.id, eventTitle: item.title })}
+                    onPress={() => navigation.navigate('AdminParticipants', { eventId: item.id })}
                 >
                     <Users size={16} color="#007AFF" />
                     <Text style={styles.participantsText}>
-                        View Participants ({item.registeredCount}/{item.capacity})
+                        View Participants ({item.capacity - (item.remainingSeats || 0)}/{item.capacity || 0})
                     </Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -102,6 +103,12 @@ const AdminEventListScreen = ({ navigation }) => {
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No events created yet</Text>
+                        <Text style={styles.emptySubText}>Tap the + button to create your first event</Text>
+                    </View>
+                }
             />
 
             <TouchableOpacity
@@ -119,9 +126,15 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     listContent: {
         padding: 16,
         paddingBottom: 80,
+        flexGrow: 1,
     },
     card: {
         backgroundColor: 'white',
@@ -161,6 +174,19 @@ const styles = StyleSheet.create({
         padding: 4,
         marginLeft: 8,
     },
+    cancelledBadge: {
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+    },
+    cancelledText: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -184,6 +210,23 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         color: '#007AFF',
         fontWeight: '600',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: 18,
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
     },
     fab: {
         position: 'absolute',
