@@ -25,4 +25,17 @@ function validateEvent(data) {
   return null;
 }
 
-module.exports = { validateEvent };
+function validateRegistration(data) {
+  if (!data.userId) return "userId is required.";
+  if (!data.eventId) return "eventId is required.";
+
+  if (isNaN(Number(data.eventId))) return "eventId must be a number.";
+
+  return null;
+}
+
+module.exports = {
+  validateEvent,
+  validateRegistration
+};
+
