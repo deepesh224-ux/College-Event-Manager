@@ -1,155 +1,108 @@
 import React, { useState } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    ScrollView,
-    Alert,
-} from 'react-native';
-import { useUser } from '../context/UserContext';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { User, Lock, Mail, BookOpen } from 'lucide-react-native';
 
-const AuthScreen = () => {
-    const { signIn } = useUser();
-    const [isAdminMode, setIsAdminMode] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        rollNumber: '',
-        branch: '',
-        year: '',
-    });
+const AuthScreen = ({ navigation }) => {
+    const [isLogin, setIsLogin] = useState(true);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [rollNo, setRollNo] = useState('');
 
-    const handleInputChange = (field, value) => {
-        setFormData((prev) => ({
-            ...prev,
-            [field]: value,
-        }));
-    };
-
-    const handleSignIn = async () => {
-        const userData = {
-            name: formData.name.trim(),
-            isAdmin: isAdminMode,
-        };
-
-        // Add student-specific fields if not admin
-        if (!isAdminMode) {
-            if (formData.rollNumber) userData.rollNumber = formData.rollNumber.trim();
-            if (formData.branch) userData.branch = formData.branch.trim();
-            if (formData.year) userData.year = parseInt(formData.year, 10);
+    const handleAuth = () => {
+        // Mock Authentication Logic
+        if (email === 'admin@college.edu' && password === 'admin') {
+            navigation.replace('AdminEventList');
+        } else if (email && password) {
+            // Simulate student login
+            navigation.replace('EventList');
+        } else {
+            Alert.alert('Error', 'Please fill in all fields');
         }
-
-        const result = await signIn(userData);
-
-        if (!result.success) {
-            const errorMessages = Object.values(result.errors).join('\n');
-            Alert.alert('Sign In Failed', errorMessages);
-        }
-    };
-
-    const toggleMode = () => {
-        setIsAdminMode(!isAdminMode);
-        setFormData({
-            name: '',
-            rollNumber: '',
-            branch: '',
-            year: '',
-        });
     };
 
     return (
-        <ScrollView
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
-            contentContainerStyle={styles.contentContainer}
-            accessibilityLabel="auth-screen"
         >
-            <View style={styles.header}>
-                <Text style={styles.title}>CampusHub Events</Text>
-                <Text style={styles.subtitle}>
-                    {isAdminMode ? 'Admin Login' : 'Student Login'}
-                </Text>
+            <View style={styles.logoContainer}>
+                <View style={styles.logoCircle}>
+                    <BookOpen size={40} color="#007AFF" />
+                </View>
+                <Text style={styles.appName}>CampusHub</Text>
+                <Text style={styles.tagline}>College Event Manager</Text>
             </View>
 
-            <View style={styles.form}>
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Name *</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter your name"
-                        value={formData.name}
-                        onChangeText={(value) => handleInputChange('name', value)}
-                        autoCapitalize="words"
-                    />
-                </View>
+            <View style={styles.formContainer}>
+                <Text style={styles.headerText}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
 
-                {!isAdminMode && (
+                {!isLogin && (
                     <>
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Roll Number</Text>
+                        <View style={styles.inputContainer}>
+                            <User size={20} color="#666" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g., 2021CS001"
-                                value={formData.rollNumber}
-                                onChangeText={(value) => handleInputChange('rollNumber', value)}
-                                autoCapitalize="characters"
+                                placeholder="Full Name"
+                                value={name}
+                                onChangeText={setName}
                             />
                         </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Branch</Text>
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.hashIcon}>#</Text>
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g., Computer Science"
-                                value={formData.branch}
-                                onChangeText={(value) => handleInputChange('branch', value)}
-                                autoCapitalize="words"
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Year</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g., 1, 2, 3, or 4"
-                                value={formData.year}
-                                onChangeText={(value) => handleInputChange('year', value)}
-                                keyboardType="number-pad"
-                                maxLength={1}
+                                placeholder="Roll Number"
+                                value={rollNo}
+                                onChangeText={setRollNo}
                             />
                         </View>
                     </>
                 )}
 
-                <TouchableOpacity
-                    style={styles.signInButton}
-                    onPress={handleSignIn}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.signInButtonText}>Sign In</Text>
+                <View style={styles.inputContainer}>
+                    <Mail size={20} color="#666" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email Address"
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                    />
+                </View>
+
+                <View style={styles.inputContainer}>
+                    <Lock size={20} color="#666" style={styles.inputIcon} />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                </View>
+
+                <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
+                    <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Sign Up'}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={styles.toggleButton}
-                    onPress={toggleMode}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.toggleButtonText}>
-                        {isAdminMode
-                            ? 'Switch to Student Login'
-                            : 'Switch to Admin Login'}
+                <TouchableOpacity onPress={() => setIsLogin(!isLogin)} style={styles.switchButton}>
+                    <Text style={styles.switchText}>
+                        {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
                     </Text>
                 </TouchableOpacity>
-            </View>
 
-            <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                    {isAdminMode
-                        ? 'Admin access for event management'
-                        : 'Students can browse and register for events'}
-                </Text>
+                {isLogin && (
+                    <TouchableOpacity onPress={() => {
+                        setEmail('admin@college.edu');
+                        setPassword('admin');
+                    }} style={styles.adminHint}>
+                        <Text style={styles.adminHintText}>Tap for Admin Demo</Text>
+                    </TouchableOpacity>
+                )}
             </View>
-        </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -157,83 +110,109 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
-    },
-    contentContainer: {
+        justifyContent: 'center',
         padding: 20,
-        paddingTop: 60,
     },
-    header: {
+    logoContainer: {
         alignItems: 'center',
         marginBottom: 40,
     },
-    title: {
+    logoCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    appName: {
         fontSize: 32,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 8,
     },
-    subtitle: {
-        fontSize: 18,
+    tagline: {
+        fontSize: 16,
         color: '#666',
+        marginTop: 4,
     },
-    form: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
+    formContainer: {
+        backgroundColor: 'white',
         padding: 20,
+        borderRadius: 16,
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
     },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
+    headerText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 24,
+        textAlign: 'center',
         color: '#333',
-        marginBottom: 8,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        marginBottom: 16,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    inputIcon: {
+        marginRight: 10,
+    },
+    hashIcon: {
+        fontSize: 20,
+        color: '#666',
+        marginRight: 14,
+        marginLeft: 4,
+        fontWeight: 'bold',
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+        flex: 1,
+        paddingVertical: 12,
         fontSize: 16,
-        backgroundColor: '#f9f9f9',
+        color: '#333',
     },
-    signInButton: {
+    authButton: {
         backgroundColor: '#007AFF',
-        borderRadius: 8,
-        padding: 16,
+        paddingVertical: 16,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 8,
     },
-    signInButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+    authButtonText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
-    toggleButton: {
-        marginTop: 16,
-        padding: 12,
+    switchButton: {
+        marginTop: 20,
         alignItems: 'center',
     },
-    toggleButtonText: {
+    switchText: {
         color: '#007AFF',
         fontSize: 14,
-        fontWeight: '500',
     },
-    footer: {
-        marginTop: 30,
+    adminHint: {
+        marginTop: 20,
         alignItems: 'center',
     },
-    footerText: {
-        fontSize: 14,
+    adminHintText: {
         color: '#999',
-        textAlign: 'center',
-    },
+        fontSize: 12,
+        fontStyle: 'italic',
+    }
 });
 
 export default AuthScreen;
