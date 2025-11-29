@@ -113,3 +113,17 @@ const dummyConfig = {
 
 export default dummyConfig;
 
+
+// Dummy hook for testing commit.
+// You can commit this safely — not imported anywhere.
+
+import { useState } from "react";
+
+export default function useDummy() {
+  const [value, setValue] = useState("dummy");
+
+  const update = () => setValue("updated dummy");
+
+  return { value, update };
+}
+
