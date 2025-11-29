@@ -1,4 +1,5 @@
 import React from 'react';
+import { TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -18,6 +19,41 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 /**
+ * Logout Button Component
+ * Shows in the header with confirmation dialog
+ */
+const LogoutButton = () => {
+    const { signOut, getDisplayName } = useUser();
+
+    const handleLogout = () => {
+        Alert.alert(
+            'Logout',
+            `Are you sure you want to logout?`,
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await signOut();
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
+    };
+
+    return (
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+    );
+};
+
+/**
  * Student Flow - Bottom Tab Navigator
  * Contains three tabs: Events, My Events, and My Day
  * Each tab has its own stack for nested navigation
@@ -33,14 +69,17 @@ const EventsStack = () => {
             <Stack.Screen
                 name="EventList"
                 component={EventListScreen}
-                options={{ title: 'All Events' }}
+                options={{
+                    title: 'All Events',
+                    headerRight: () => <LogoutButton />,
+                }}
             />
             <Stack.Screen
                 name="EventDetails"
                 component={EventDetailsScreen}
                 options={{ title: 'Event Details' }}
             />
-            
+
         </Stack.Navigator>
     );
 };
@@ -56,7 +95,10 @@ const MyEventsStack = () => {
             <Stack.Screen
                 name="MyEventsList"
                 component={MyEventsScreen}
-                options={{ title: 'My Events' }}
+                options={{
+                    title: 'My Events',
+                    headerRight: () => <LogoutButton />,
+                }}
             />
             <Stack.Screen
                 name="EventDetails"
@@ -78,7 +120,10 @@ const MyDayStack = () => {
             <Stack.Screen
                 name="MyDayList"
                 component={MyDayScreen}
-                options={{ title: 'My Day' }}
+                options={{
+                    title: 'My Day',
+                    headerRight: () => <LogoutButton />,
+                }}
             />
             <Stack.Screen
                 name="EventDetails"
@@ -140,7 +185,10 @@ const AdminFlow = () => {
             <Stack.Screen
                 name="AdminEventList"
                 component={AdminEventListScreen}
-                options={{ title: 'Manage Events' }}
+                options={{
+                    title: 'Manage Events',
+                    headerRight: () => <LogoutButton />,
+                }}
             />
             <Stack.Screen
                 name="AdminEventForm"
@@ -239,4 +287,21 @@ export const navigateToAdminParticipants = (navigation, eventId) => {
     navigation.navigate('AdminParticipants', { eventId });
 };
 
+/**
+ * Styles for navigation components
+ */
+const styles = StyleSheet.create({
+    logoutButton: {
+        marginRight: 15,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+    },
+    logoutText: {
+        color: '#FF3B30',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+});
+
 export default AppNavigator;
+
