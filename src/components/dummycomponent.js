@@ -32,3 +32,16 @@ const styles = StyleSheet.create({
 });
 
 export default DummyComponent;
+
+// This file is only for GitHub commit testing.
+// It does not impact the app because it exports nothing
+// and is not imported anywhere.
+
+const placeholderNote = `
+  This is a dummy file created only for commit purposes.
+  It has no connection with the main codebase.
+`;
+
+console.log("DummyPlaceholder loaded for GitHub commit test.");
+
+export default placeholderNote;
