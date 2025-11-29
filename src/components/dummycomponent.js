@@ -84,3 +84,14 @@ const DummyBox = () => {
 
 export default DummyBox;
 
+// Dummy configuration file for GitHub commits.
+// This file is never imported or used by the app.
+
+const dummyConfig = {
+  version: "0.0.1-dummy",
+  author: "TestUser",
+  description: "This config is only for GitHub commit testing.",
+};
+
+export default dummyConfig;
+
