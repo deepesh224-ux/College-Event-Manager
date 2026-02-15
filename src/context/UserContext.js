@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from "react";
+import { Platform } from 'react-native';
 import {
     CAMPUSHUB_CURRENT_USER,
     saveKey,
@@ -50,9 +51,42 @@ export function UserProvider({ children }) {
     };
 
     const signOut = async () => {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-        await saveKey(CAMPUSHUB_CURRENT_USER, null);
+        console.log('[UserContext] signOut called. Platform:', Platform.OS);
+
+        try {
+            // Hardcode key to be sure
+            const KEY = "CAMPUSHUB_CURRENT_USER";
+
+            // 1. Clear storage via AsyncStorage
+            await saveKey(KEY, null);
+            console.log('[UserContext] saveKey(null) called');
+
+            // 2. Force clear localStorage on web
+            if (Platform.OS === 'web') {
+                console.log('[UserContext] Force clearing localStorage for web');
+                try {
+                    localStorage.removeItem(KEY);
+                    // Verify removal
+                    const check = localStorage.getItem(KEY);
+                    console.log('[UserContext] Key after removal:', check);
+
+                    // Nuclear option: Reload page to reset all state
+                    console.log('[UserContext] Reloading page...');
+                    window.location.reload();
+                    return { success: true };
+                } catch (e) {
+                    console.error('[UserContext] localStorage remove failed', e);
+                }
+            }
+
+            // 3. Update state (for non-web or if reload fails)
+            setCurrentUser(null);
+            console.log('[UserContext] currentUser set to null');
+            setIsAuthenticated(false);
+
+        } catch (error) {
+            console.error('[UserContext] signOut error:', error);
+        }
         return { success: true };
     };
 

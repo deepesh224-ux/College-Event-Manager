@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, Alert, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -26,24 +26,37 @@ const LogoutButton = () => {
     const { signOut, getDisplayName } = useUser();
 
     const handleLogout = () => {
-        Alert.alert(
-            'Logout',
-            `Are you sure you want to logout?`,
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Logout',
-                    style: 'destructive',
-                    onPress: async () => {
-                        await signOut();
+        console.log('Logout initiated');
+
+        const performLogout = async () => {
+            console.log('Calling signOut from LogoutButton');
+            await signOut();
+            console.log('signOut completed');
+        };
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm('Are you sure you want to logout?');
+            if (confirmed) {
+                performLogout();
+            }
+        } else {
+            Alert.alert(
+                'Logout',
+                `Are you sure you want to logout?`,
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
                     },
-                },
-            ],
-            { cancelable: true }
-        );
+                    {
+                        text: 'Logout',
+                        style: 'destructive',
+                        onPress: performLogout,
+                    },
+                ],
+                { cancelable: true }
+            );
+        }
     };
 
     return (
@@ -212,6 +225,7 @@ const AdminFlow = () => {
  */
 const RootNavigator = () => {
     const { user } = useUser();
+    console.log('[RootNavigator] Rendering with user:', user ? `${user.name} (${user.email})` : 'null');
 
     return (
         <Stack.Navigator

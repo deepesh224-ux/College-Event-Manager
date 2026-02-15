@@ -9,9 +9,16 @@ export const CAMPUSHUB_CURRENT_USER = "CAMPUSHUB_CURRENT_USER";
 
 export async function saveKey(key, value) {
   try {
-    await AsyncStorage.setItem(key, JSON.stringify(value));
+    if (value === null || value === undefined) {
+      console.log(`[storageService] Removing key: ${key}`);
+      await AsyncStorage.removeItem(key);
+    } else {
+      console.log(`[storageService] Saving key: ${key}`, value);
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    }
     return { success: true };
   } catch (error) {
+    console.error(`[storageService] Error saving key ${key}:`, error);
     return { success: false, error };
   }
 }
@@ -20,8 +27,10 @@ export async function saveKey(key, value) {
 export async function loadKey(key) {
   try {
     const value = await AsyncStorage.getItem(key);
+    // console.log(`[storageService] Loaded key ${key}:`, value);
     return value ? JSON.parse(value) : null;
   } catch (error) {
+    console.error(`[storageService] Error loading key ${key}:`, error);
     return null;
   }
 }
